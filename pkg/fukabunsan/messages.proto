@@ -17,6 +17,7 @@ message LBRequest {
     string Domain = 4;
     string URI = 5;
     string Method = 6;
+    string RequestID = 8;   // 🔥 THÊM DÒNG NÀY
 
     message HeaderSchema {
         string field = 1;

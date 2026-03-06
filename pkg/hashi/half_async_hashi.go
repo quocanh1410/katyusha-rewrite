@@ -7,7 +7,8 @@ import (
 	"os"
 	"reflect"
 	"sync"
-
+	"time"
+    "github.com/bonavadeur/katyusha/pkg/bonalib"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -78,7 +79,34 @@ func NewHalfAsyncHashi(
 	return newHalfAsyncHashi
 }
 
-func (hah *HalfAsyncHashi) AsyncSendClient(message proto.Message) (proto.Message, error) { // for Client
+// func (hah *HalfAsyncHashi) AsyncSendClient(message proto.Message) (proto.Message, error) { // for Client
+// 	// marshal message
+// 	sentMessageBytes, err := proto.Marshal(message)
+// 	if err != nil {
+// 		log.Fatalln("Failed to encode sentMessage:", err)
+// 		return nil, err
+// 	}
+
+// 	// send
+// 	hah.sendLock.Lock()
+// 	_, err = hah.upstream.Write(sentMessageBytes)
+// 	if err != nil {
+// 		fmt.Println("Error writing to upstream:", err)
+// 		return nil, err
+// 	}
+
+// 	// receive
+// 	receivedMessage := <-hah.Bucket
+// 	hah.sendLock.Unlock()
+
+// 	return receivedMessage, nil
+// }
+
+
+func (hah *HalfAsyncHashi) AsyncSendClient(message proto.Message) (proto.Message, error) {
+    bonalib.Info("AsyncSendClient CALLED", "Worker", hah.Name)
+	start := time.Now() // ⬅️ BẮT ĐẦU ĐO
+
 	// marshal message
 	sentMessageBytes, err := proto.Marshal(message)
 	if err != nil {
@@ -90,17 +118,28 @@ func (hah *HalfAsyncHashi) AsyncSendClient(message proto.Message) (proto.Message
 	hah.sendLock.Lock()
 	_, err = hah.upstream.Write(sentMessageBytes)
 	if err != nil {
+		hah.sendLock.Unlock()
 		fmt.Println("Error writing to upstream:", err)
 		return nil, err
 	}
 
-	// receive
+	// receive (BLOCK Ở ĐÂY)
 	receivedMessage := <-hah.Bucket
 	hah.sendLock.Unlock()
+
+	latency := time.Since(start) // ⬅️ KẾT THÚC ĐO
+
+	bonalib.Info(
+    "HashiLatency",
+    "Worker", hah.Name,
+    "UnixNano", start.UnixNano(),
+    "LatencyMs", latency.Milliseconds(),
+)
 
 	return receivedMessage, nil
 }
 
+//gốc
 func (hah *HalfAsyncHashi) AsyncReceiveClient() { // for Client
 	// receive
 	for {

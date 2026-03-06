@@ -10,7 +10,7 @@ REDBGR='\033[0;41m'
 NCBGR='\033[0m'
 
 ########## CONFIG ##########
-DOCKER_REGISTRY="bonavadeur"
+DOCKER_REGISTRY="risky14"
 IMAGE="katyusha" # docker.io/{DOCKER_REGISTRY}/{IMAGE}
 NAMESPACE="knative-serving"
 component="activator"
@@ -49,10 +49,10 @@ dockerBuild() {
     sudo crictl rmi docker.io/$DOCKER_REGISTRY/$IMAGE:dev
     sudo ctr -n=k8s.io images import $IMAGE.tar
     if [ "$mode" == "mnode" ]; then
-        ssh node2 "crictl rmi docker.io/$DOCKER_REGISTRY/$IMAGE:dev"
-        ssh node2 "ctr -n=k8s.io images import $IMAGE.tar"
-        ssh node3 "crictl rmi docker.io/$DOCKER_REGISTRY/$IMAGE:dev"
-        ssh node3 "ctr -n=k8s.io images import $IMAGE.tar"
+        echo "test" |ssh test@192.168.1.38 "sudo -S crictl rmi docker.io/$DOCKER_REGISTRY/$IMAGE:dev"
+        echo "test" |ssh test@192.168.1.38 "sudo -S ctr -n=k8s.io images import $IMAGE.tar"
+        echo "test" |ssh test@192.168.1.46 "sudo -S crictl rmi docker.io/$DOCKER_REGISTRY/$IMAGE:dev"
+        echo "test" |ssh test@192.168.1.46 "sudo -S ctr -n=k8s.io images import $IMAGE.tar"
     fi
 
     logStage "Clean up"
