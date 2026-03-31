@@ -52,23 +52,72 @@ func NewResponsePool() *ResponsePool {
 
 
 //rewrite with latency-based metric collection
+// func (rp *ResponsePool) ResponsePoolAdapter(params ...interface{}) (interface{}, error) {
+
+// 	feedback := params[0].(*ResponseFeedback)
+
+// 	// DÙNG SourceIP LÀM KEY
+// 	key := feedback.SourceIP
+
+// 	if key != "" {
+
+// 		// LẤY POD TARGET ĐÃ LƯU Ở LBAlgorithm
+// 		var target string
+// 		if value, ok := common.GlobalRequestTarget.Load(key); ok {
+// 			target = value.(string)
+// 			common.GlobalRequestTarget.Delete(key)
+// 		}
+
+// 		// LẤY START TIME VÀ TÍNH LATENCY
+// 		if value, ok := common.GlobalRequestStart.Load(key); ok {
+
+// 			startTime := value.(time.Time)
+// 			latency := time.Since(startTime)
+
+// 			bonalib.Info("🔥 POD:", target, "LATENCY:", latency)
+
+// 			// CẬP NHẬT METRIC CỦA POD
+// 			if target != "" {
+
+// 				metricValue, _ := common.PodMetric.LoadOrStore(target, &common.PodMetrics{})
+// 				metric := metricValue.(*common.PodMetrics)
+
+// 				metric.Count++
+// 				metric.Total += latency
+// 			}
+
+// 			common.GlobalRequestStart.Delete(key)
+// 		}
+// 	}
+
+// 	// Giữ nguyên phần pool
+// 	rp.PoolAppendingLock.Lock()
+// 	bonalib.Info("ResponsePoolAdapter", feedback)
+// 	rp.Pool = append([]*ResponseFeedback{feedback}, rp.Pool...)
+// 	rp.PoolAppendingLock.Unlock()
+
+// 	return &ResponseConfirm{SymbolizeResponse: Status_Success}, nil
+// }
+
+
 func (rp *ResponsePool) ResponsePoolAdapter(params ...interface{}) (interface{}, error) {
 
 	feedback := params[0].(*ResponseFeedback)
 
-	// DÙNG SourceIP LÀM KEY
 	key := feedback.SourceIP
 
 	if key != "" {
 
-		// LẤY POD TARGET ĐÃ LƯU Ở LBAlgorithm
+		// ================= LẤY TARGET =================
+
 		var target string
 		if value, ok := common.GlobalRequestTarget.Load(key); ok {
 			target = value.(string)
 			common.GlobalRequestTarget.Delete(key)
 		}
 
-		// LẤY START TIME VÀ TÍNH LATENCY
+		// ================= LATENCY =================
+
 		if value, ok := common.GlobalRequestStart.Load(key); ok {
 
 			startTime := value.(time.Time)
@@ -76,7 +125,6 @@ func (rp *ResponsePool) ResponsePoolAdapter(params ...interface{}) (interface{},
 
 			bonalib.Info("🔥 POD:", target, "LATENCY:", latency)
 
-			// CẬP NHẬT METRIC CỦA POD
 			if target != "" {
 
 				metricValue, _ := common.PodMetric.LoadOrStore(target, &common.PodMetrics{})
@@ -88,9 +136,24 @@ func (rp *ResponsePool) ResponsePoolAdapter(params ...interface{}) (interface{},
 
 			common.GlobalRequestStart.Delete(key)
 		}
+
+		// ================= RELEASE POD =================
+
+		if target != "" {
+			counter := common.GetCounter(target)
+
+			counter.Mu.Lock()
+			if counter.Val > 0 {
+				counter.Val--
+			}
+			counter.Mu.Unlock()
+
+			bonalib.Info("✅ RELEASE:", target)
+		}
 	}
 
-	// Giữ nguyên phần pool
+	// ================= POOL =================
+
 	rp.PoolAppendingLock.Lock()
 	bonalib.Info("ResponsePoolAdapter", feedback)
 	rp.Pool = append([]*ResponseFeedback{feedback}, rp.Pool...)
