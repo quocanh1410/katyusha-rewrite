@@ -51,7 +51,7 @@ func NewResponsePool() *ResponsePool {
 
 
 
-//rewrite with latency-based metric collection
+// version 1
 // func (rp *ResponsePool) ResponsePoolAdapter(params ...interface{}) (interface{}, error) {
 
 // 	feedback := params[0].(*ResponseFeedback)
@@ -99,7 +99,7 @@ func NewResponsePool() *ResponsePool {
 // 	return &ResponseConfirm{SymbolizeResponse: Status_Success}, nil
 // }
 
-
+// version 2
 func (rp *ResponsePool) ResponsePoolAdapter(params ...interface{}) (interface{}, error) {
 
 	feedback := params[0].(*ResponseFeedback)
